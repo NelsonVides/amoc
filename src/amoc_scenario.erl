@@ -125,6 +125,11 @@ maybe_store_module(Module) ->
             ok
     end.
 
+-spec propagate_module(module(), sourcecode()) -> any().
+propagate_module(Module, ModuleSource) ->
+    Nodes = amoc_cluster:all_nodes() -- [node()],
+    rpc:multicall(Nodes, amoc_scenario, install_module, [Module, ModuleSource]).
+
 -spec get_module_type(module()) -> scenario | configurable | ordinary.
 get_module_type(Module) ->
     case erlang:function_exported(Module, module_info, 1) of
@@ -157,6 +162,7 @@ add_module(Module, ModuleSource) ->
             case compile_and_load_scenario(ScenarioPath) of
                 {ok, Module} ->
                     maybe_store_module(Module),
+                    propagate_module(Module, ModuleSource),
                     ets:insert(uploaded_modules, {Module, ModuleSource}),
                     ok;
                 Error -> Error
