@@ -1,5 +1,5 @@
 %%==============================================================================
-%% Copyright 2020 Erlang Solutions Ltd.
+%% Copyright 2023 Erlang Solutions Ltd.
 %% Licensed under the Apache License, Version 2.0 (see LICENSE file)
 %%==============================================================================
 -module(amoc_coordinator).
@@ -51,7 +51,12 @@
 %% timeout in seconds
 -type coordination_timeout_in_sec() :: pos_integer() | infinity.
 
--export_type([coordination_plan/0, normalized_coordination_item/0]).
+-export_type([coordination_event_type/0,
+              coordination_event/0,
+              coordination_action/0,
+              coordination_data/0,
+              coordination_plan/0,
+              normalized_coordination_item/0]).
 
 %%%===================================================================
 %%% Api
@@ -141,6 +146,7 @@ handle_event(Event, {timeout, Pid}) ->
     erlang:send(Pid, Event),
     {ok, {timeout, Pid}};
 handle_event(Event, {worker, Pid}) ->
+    telemetry:execute([amoc, coordinator, event], #{count => 1}, #{type => Event}),
     case Event of
         coordinator_timeout -> %% synchronous notification
             amoc_coordinator_worker:timeout(Pid);
